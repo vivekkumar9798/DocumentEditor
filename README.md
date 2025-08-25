@@ -1,3 +1,96 @@
+## DocumentEditor (React Native)
+
+An opinionated rich-text viewing and formatting experience powered by `react-native-webview` with a native toolbar. The WebView is selection-only (not free-typing) while the toolbar applies formatting (font family, size, color, bold/italic/underline) to the selected text.
+
+### Features
+- Selection-only WebView: users can select text but cannot type or navigate links
+- Formatting Toolbar: font, size, color, bold, italic, underline
+- Color Picker: full-screen, scrollable palette with immediate apply
+- Selection Preservation: formatting applies even if the selection momentarily collapses
+- Cross-platform: iOS and Android
+
+### Project Structure (high level)
+- `src/components/DocumentEditor/index.tsx`: main editor container (header, toolbar, WebView, footer)
+- `src/components/DocumentEditor/components/DocumentWebView.tsx`: WebView wrapper with injected HTML/JS
+- `src/components/DocumentEditor/components/FormattingToolbar.tsx`: toolbar layout
+- `src/components/DocumentEditor/components/StyleControls.tsx`: bold/italic/underline controls
+- `src/components/DocumentEditor/components/DropdownMenu.tsx`: dropdown used for font and size
+- `src/components/DocumentEditor/components/ColorControls.tsx`: color chip and modal palette
+- `src/components/DocumentEditor/components/SelectedTextDisplay.tsx`: shows currently selected text
+- `src/components/DocumentEditor/components/DocumentHeader.tsx`: header (back optional, privacy button optional)
+
+### Getting Started
+
+Prerequisites:
+- Node.js 16+
+- Yarn or npm
+- Xcode (for iOS) and/or Android Studio (for Android)
+
+Install dependencies:
+```bash
+yarn install
+# or
+npm install
+```
+
+iOS setup:
+```bash
+cd ios
+pod install
+cd ..
+yarn ios
+```
+
+Android setup:
+```bash
+yarn android
+```
+
+### Usage
+
+Render the `DocumentEditor` somewhere in your app (see `App.tsx` for example wiring). Toolbar actions are already connected to the WebView via `executeCommand` and injected JS.
+
+### How Formatting Works
+- The WebView injects HTML with a content area (`#editor`) that is `contenteditable` toggled only while applying commands.
+- Selection is tracked in `lastRange` and `stableRange` within the WebView.
+- Before applying a command, the WebView restores the last stable range to ensure the previously selected text is still targeted.
+- Commands include:
+  - `fontName` (with fallback to wrapping span style)
+  - `fontSize`
+  - `foreColor`
+  - `bold` / `italic` / `underline`
+
+### Color Picker
+- Open from the toolbar chip to see a scrollable palette
+- Tapping a color applies immediately and closes the modal shortly after to avoid selection loss
+
+### Bundling Custom Fonts (Optional but Recommended)
+Using only system fonts can result in inconsistent availability across platforms. To guarantee font families:
+1. Add `.ttf`/`.otf` to:
+   - Android: `android/app/src/main/assets/fonts/YourFont.ttf`
+   - iOS: add the font files to your Xcode project and `Info.plist` under `UIAppFonts`
+2. Reference via `@font-face` in the injected HTML or use family names recognized by the platform.
+3. Apply via toolbar (uses `execCommand('fontName')` with fallback to span style).
+
+### Troubleshooting
+- Dropdown menu clipped/hidden: we render in a modal to avoid parent clipping; ensure no custom parent `overflow: 'hidden'` container wraps the modal content.
+- Selection disappears before formatting applies: handled by `stableRange` restoration; if issues persist, ensure `onColorChange` or other handlers do not blur the WebView.
+- Fonts not changing: bundle the font and use `@font-face`, or choose fonts known to exist on the running platform.
+- iOS caret visible: we set `caret-color: transparent` and toggle `contenteditable` only during the command.
+
+### Scripts
+```json
+{
+  "start": "react-native start",
+  "ios": "react-native run-ios",
+  "android": "react-native run-android",
+  "test": "jest"
+}
+```
+
+### License
+MIT
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
