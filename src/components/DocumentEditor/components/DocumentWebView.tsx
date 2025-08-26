@@ -55,6 +55,9 @@ const htmlContent = () => `
         border-radius: 4px; 
         background: rgba(59, 130, 246, 0.05);
       }
+      /* Keep selection highlight semi-transparent so color/style changes remain visible */
+      ::selection { background: rgba(147, 197, 253, 0.35); color: inherit; }
+      #editor ::selection { background: rgba(147, 197, 253, 0.35); color: inherit; }
     </style>
   </head>
   <body>
