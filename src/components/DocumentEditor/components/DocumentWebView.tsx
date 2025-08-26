@@ -524,7 +524,7 @@ const DocumentWebView = forwardRef<DocumentWebViewHandle, Props>(function Docume
       source={{ html: html ?? htmlContent() }}
       style={style}
       androidLayerType="software"
-      onShouldStartLoadWithRequest={() => false}
+      onShouldStartLoadWithRequest={() => true}
       onContentProcessDidTerminate={() => {}}
       onLayout={onLayout}
     />
