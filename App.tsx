@@ -5,12 +5,6 @@ import { SimplifiedDocumentEditor } from './src/components/DocumentEditor/Simpli
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
-
-  const handleBackPress = () => {
-    console.log('Back button pressed');
-    // Add navigation logic here if needed
-  };
-
   return (
     <SafeAreaProvider style={styles.safeArea}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
