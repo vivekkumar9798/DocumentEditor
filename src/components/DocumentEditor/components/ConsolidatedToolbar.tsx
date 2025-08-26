@@ -133,21 +133,21 @@ const ConsolidatedToolbar: React.FC<ConsolidatedToolbarProps> = ({
               style={[styles.styleButton, isBold && styles.styleButtonActive]}
               onPress={onBold}
             >
-              <Text style={[styles.styleButtonText, isBold && styles.styleButtonTextActive]}>B</Text>
+              <Text style={[styles.styleButtonText, isBold && styles.styleButtonTextActive]}> B </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.styleButton, isItalic && styles.styleButtonActive]}
               onPress={onItalic}
             >
-              <Text style={[styles.styleButtonText, styles.italicText, isItalic && styles.styleButtonTextActive]}>I</Text>
+              <Text style={[styles.styleButtonText, styles.italicText, isItalic && styles.styleButtonTextActive]}> I </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.styleButton, isUnderline && styles.styleButtonActive]}
               onPress={onUnderline}
             >
-              <Text style={[styles.styleButtonText, isUnderline && styles.styleButtonTextActive, styles.underlineText]}>U</Text>
+              <Text style={[styles.styleButtonText, isUnderline && styles.styleButtonTextActive, styles.underlineText]}> U </Text>
             </TouchableOpacity>
           </View>
 
