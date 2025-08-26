@@ -4,19 +4,16 @@ An opinionated rich-text viewing and formatting experience powered by `react-nat
 
 ### Features
 - Selection-only WebView: users can select text but cannot type or navigate links
-- Formatting Toolbar: font, size, color, bold, italic, underline
-- Color Picker: full-screen, scrollable palette with immediate apply
-- Selection Preservation: formatting applies even if the selection momentarily collapses
+- Floating Toolbar: auto-positions above selection (flips below if needed), stays centered and in-bounds
+- Formatting: font, size, color, bold, italic, underline
+- Instant Color Apply: picking a color applies immediately and keeps selection/toolbar visible
+- Persistent Selection: selection remains highlighted until you close the toolbar
 - Cross-platform: iOS and Android
 
 ### Project Structure (high level)
-- `src/components/DocumentEditor/index.tsx`: main editor container (header, toolbar, WebView, footer)
+- `src/components/DocumentEditor/SimplifiedDocumentEditor.tsx`: main editor container (header, toolbar, WebView, footer)
 - `src/components/DocumentEditor/components/DocumentWebView.tsx`: WebView wrapper with injected HTML/JS
-- `src/components/DocumentEditor/components/FormattingToolbar.tsx`: toolbar layout
-- `src/components/DocumentEditor/components/StyleControls.tsx`: bold/italic/underline controls
-- `src/components/DocumentEditor/components/DropdownMenu.tsx`: dropdown used for font and size
-- `src/components/DocumentEditor/components/ColorControls.tsx`: color chip and modal palette
-- `src/components/DocumentEditor/components/SelectedTextDisplay.tsx`: shows currently selected text
+- `src/components/DocumentEditor/components/ConsolidatedToolbar.tsx`: all formatting controls in one component
 - `src/components/DocumentEditor/components/DocumentHeader.tsx`: header (back optional, privacy button optional)
 
 ### Getting Started
@@ -48,21 +45,22 @@ yarn android
 
 ### Usage
 
-Render the `DocumentEditor` somewhere in your app (see `App.tsx` for example wiring). Toolbar actions are already connected to the WebView via `executeCommand` and injected JS.
+Render the `SimplifiedDocumentEditor` somewhere in your app (see `App.tsx` for example wiring). Toolbar actions are already connected to the WebView via `executeCommand` and injected JS.
 
 ### How Formatting Works
-- The WebView injects HTML with a content area (`#editor`) that is `contenteditable` toggled only while applying commands.
-- Selection is tracked in `lastRange` and `stableRange` within the WebView.
-- Before applying a command, the WebView restores the last stable range to ensure the previously selected text is still targeted.
+- The WebView injects HTML with a content area (`#editor`). We enable `contenteditable` while executing commands and keep it enabled afterwards so the visual selection highlight persists. Typing and native menus are still blocked via `beforeinput`, `keydown`, `paste`, and `drop` preventers.
+- Selection is tracked in `lastRange` and `stableRange` within the WebView and restored before each command.
+- React Native side calls `reportSelection` after each action to keep the toolbar positioned and state in sync. Pressing close calls `unselect` to clear selection and hide the toolbar.
 - Commands include:
-  - `fontName` (with fallback to wrapping span style)
+  - `fontName` (with fallback wrapping a span style)
   - `fontSize`
   - `foreColor`
   - `bold` / `italic` / `underline`
+  - `reportSelection` and `unselect` (integration helpers)
 
 ### Color Picker
 - Open from the toolbar chip to see a scrollable palette
-- Tapping a color applies immediately and closes the modal shortly after to avoid selection loss
+- Tapping a color applies immediately and closes the modal; selection remains active and the toolbar persists
 
 ### Bundling Custom Fonts (Optional but Recommended)
 Using only system fonts can result in inconsistent availability across platforms. To guarantee font families:

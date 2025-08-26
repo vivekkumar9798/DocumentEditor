@@ -5,7 +5,6 @@ import { DocumentHeaderProps } from '../types';
 export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
   onBackPress,
   title,
-  onPrivacyPress,
 }) => {
   return (
     <View style={styles.header}>
@@ -17,13 +16,7 @@ export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
         <View style={styles.headerSide} />
       )}
       <Text style={[styles.headerTitle, !onBackPress && styles.headerTitleCentered]}>{title}</Text>
-      {onPrivacyPress ? (
-        <TouchableOpacity style={styles.privacyButton} onPress={onPrivacyPress}>
-          <Text style={styles.privacyText}>Privacy</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.headerSide} />
-      )}
+      <View style={styles.headerSide} />
     </View>
   );
 };

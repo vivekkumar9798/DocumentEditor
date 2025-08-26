@@ -1,7 +1,7 @@
 import React from 'react';
 import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import DocumentEditor from './src/components/DocumentEditor';
+import { SimplifiedDocumentEditor } from './src/components/DocumentEditor/SimplifiedIndex';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -15,7 +15,7 @@ function App() {
     <SafeAreaProvider style={styles.safeArea}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.container}>
-        <DocumentEditor onBackPress={handleBackPress} />
+        <SimplifiedDocumentEditor onShowPrivacy={() => console.log('Privacy pressed')} />
       </View>
     </SafeAreaProvider>
   );
