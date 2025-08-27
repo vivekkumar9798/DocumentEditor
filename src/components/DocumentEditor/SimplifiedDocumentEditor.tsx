@@ -3,13 +3,53 @@ import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DocumentHeader from './components/DocumentHeader';
 import ConsolidatedToolbar from './components/ConsolidatedToolbar';
-import DocumentWebView, { DocumentWebViewHandle } from './components/DocumentWebView';
+import DocumentWebView, {
+  DocumentWebViewHandle,
+} from './components/DocumentWebView';
 import { DocumentEditorProps, DocumentEditorState } from './types';
+
+const defaultContent = `
+  <h1>Sample Document</h1>
+  <p>
+    Select any portion of this text to try the toolbar actions. You can change
+    the <strong>font</strong>, <em>size</em>, <u>style</u>, and <span style="color:#ef4444">color</span> of the selection.
+  </p>
+  <h2>Introduction</h2>
+  <p>
+    This is a longer paragraph intended to provide more content inside the WebView.
+    The goal is to ensure selection works consistently across multiple lines and
+    different elements such as <code>inline code</code>, links like
+    <a href="https://example.com">example.com</a>, and nested inline spans.
+  </p>
+  <p>
+    Formatting commands are applied programmatically and do not allow free typing.
+    This means you can highlight words or sentences and apply bold, italic, underline,
+    font family, size, or color changes from the toolbar above.
+  </p>
+  <h2>List of Topics</h2>
+  <ul>
+    <li>Headings and paragraphs for realistic structure</li>
+    <li>Inline elements such as <em>emphasis</em> and <strong>strong</strong></li>
+    <li>Links (navigation blocked)</li>
+    <li>Lists and quotes</li>
+  </ul>
+  <blockquote>
+    "Good writing is clear thinking made visible." — Bill Wheeler
+  </blockquote>
+  <h3>Another Section</h3>
+  <p>
+    Try selecting across sentence boundaries, within lists, or inside quotes. The selection should remain
+    intact when using the toolbar, and the caret should remain hidden.
+  </p>
+  <p>
+    End of sample content. Feel free to add more text programmatically if required.
+  </p>
+`;
 
 const SimplifiedDocumentEditor: React.FC<DocumentEditorProps> = () => {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<DocumentWebViewHandle>(null);
-  
+
   const [state, setState] = useState<DocumentEditorState>({
     selectedText: '',
     currentFont: 'Arial',
@@ -18,45 +58,90 @@ const SimplifiedDocumentEditor: React.FC<DocumentEditorProps> = () => {
     isBold: false,
     isItalic: false,
     isUnderline: false,
-  }); 
-  const [selectionRect, setSelectionRect] = useState<{ left: number; top: number; right?: number; bottom?: number; width: number; height: number } | null>(null);
-  const [webViewLayout, setWebViewLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  });
+  const [selectionRect, setSelectionRect] = useState<{
+    left: number;
+    top: number;
+    right?: number;
+    bottom?: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [webViewLayout, setWebViewLayout] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [isToolbarVisible, setIsToolbarVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.98)).current;
-  const [toolbarSize, setToolbarSize] = useState<{ width: number; height: number } | null>(null);
+  const [toolbarSize, setToolbarSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   const handleMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
+
+      if (data.type === 'currentHTML') {
+        console.log('=== FORMATTED HTML CONTENT ===');
+        console.log(data.html);
+        console.log('=== END HTML CONTENT ===');
+      }
+
       if (data.type === 'textSelected') {
-        // When text is selected, show the toolbar.
-        // We don't hide it on deselection anymore; that's handled by the close button.
         if (data.text) {
           setIsToolbarVisible(true);
           Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 1, duration: 140, useNativeDriver: true, easing: Easing.out(Easing.cubic) }),
-            Animated.spring(scaleAnim, { toValue: 1, friction: 8, tension: 80, useNativeDriver: true })
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 140,
+              useNativeDriver: true,
+              easing: Easing.out(Easing.cubic),
+            }),
+            Animated.spring(scaleAnim, {
+              toValue: 1,
+              friction: 8,
+              tension: 80,
+              useNativeDriver: true,
+            }),
           ]).start();
         }
 
-        // Update state regardless of whether text is selected or not.
-        // This keeps the format state (bold, italic, etc.) updated.
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           selectedText: data.text,
           isBold: data.formatState ? !!data.formatState.bold : prev.isBold,
-          isItalic: data.formatState ? !!data.formatState.italic : prev.isItalic,
-          isUnderline: data.formatState ? !!data.formatState.underline : prev.isUnderline,
-          currentFont: data.formatState && data.formatState.fontFamily ? String(data.formatState.fontFamily).split(',')[0].replace(/"/g, '').trim() : prev.currentFont,
-          currentSize: data.formatState && data.formatState.fontSizePx ? fontPxToExecSize(Number(data.formatState.fontSizePx)) : prev.currentSize,
+          isItalic: data.formatState
+            ? !!data.formatState.italic
+            : prev.isItalic,
+          isUnderline: data.formatState
+            ? !!data.formatState.underline
+            : prev.isUnderline,
+          currentFont:
+            data.formatState && data.formatState.fontFamily
+              ? String(data.formatState.fontFamily)
+                  .split(',')[0]
+                  .replace(/"/g, '')
+                  .trim()
+              : prev.currentFont,
+          currentSize:
+            data.formatState && data.formatState.fontSizePx
+              ? fontPxToExecSize(Number(data.formatState.fontSizePx))
+              : prev.currentSize,
         }));
         if (data.rect && typeof data.rect.top === 'number') {
-          // Always update the selection rectangle when we have valid data.
-          // This ensures the toolbar repositions correctly if the selection changes.
-          setSelectionRect({ left: data.rect.left, top: data.rect.top, right: data.rect.right, bottom: data.rect.bottom, width: data.rect.width, height: data.rect.height });
+          setSelectionRect({
+            left: data.rect.left,
+            top: data.rect.top,
+            right: data.rect.right,
+            bottom: data.rect.bottom,
+            width: data.rect.width,
+            height: data.rect.height,
+          });
         } else if (!data.text) {
-          // When text is deselected (e.g., tap), hide the toolbar and clear selection rect.
           setIsToolbarVisible(false);
           setSelectionRect(null);
         }
@@ -85,11 +170,9 @@ const SimplifiedDocumentEditor: React.FC<DocumentEditorProps> = () => {
 
   const performAction = (action: () => void) => {
     action();
-    // After performing an action, we must prevent the toolbar from closing
-    // by telling the webview to report back the current selection state.
     setTimeout(() => {
       webViewRef.current?.executeCommand('reportSelection');
-    }, 100); // A small delay is needed to allow the DOM to update.
+    }, 100);
   };
 
   const handleBold = () => {
@@ -113,42 +196,38 @@ const SimplifiedDocumentEditor: React.FC<DocumentEditorProps> = () => {
     });
   };
 
-  const {
-    currentFont,
-    currentSize,
-    isBold,
-    isItalic,
-    isUnderline,
-  } = state;
+  const { currentFont, currentSize, isBold, isItalic, isUnderline } = state;
 
   function fontPxToExecSize(px: number): number {
     if (!px || !Number.isFinite(px)) return 3;
-    // Map approximate px sizes to execCommand sizes 1..7
-    if (px < 12) return 1; // very small
-    if (px < 14) return 2; // small
-    if (px < 18) return 3; // normal
-    if (px < 24) return 4; // large
-    if (px < 32) return 5; // huge
+    if (px < 12) return 1;
+    if (px < 14) return 2;
+    if (px < 18) return 3;
+    if (px < 24) return 4;
+    if (px < 32) return 5;
     if (px < 40) return 6;
     return 7;
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top,paddingBottom:insets.bottom }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
       <View style={styles.bgDecorOne} pointerEvents="none" />
       <View style={styles.bgDecorTwo} pointerEvents="none" />
-      
-      <DocumentHeader 
-        onBackPress={undefined}
-        title="Document Editor" 
-      />
-      
+
+      <DocumentHeader onBackPress={undefined} title="Document Editor" />
+
       <View style={styles.headerDivider} />
-      
+
       <View style={styles.editorCard}>
-        <DocumentWebView 
+        <DocumentWebView
+          content={defaultContent}
           ref={webViewRef}
-          onMessage={handleMessage} 
+          onMessage={handleMessage}
           editable={true}
           style={styles.webView}
           onLayout={(e: any) => {
@@ -157,37 +236,45 @@ const SimplifiedDocumentEditor: React.FC<DocumentEditorProps> = () => {
           }}
         />
         {isToolbarVisible && selectionRect && webViewLayout && (
-          <View
-            pointerEvents="box-none"
-            style={styles.overlayFill}
-          >
+          <View pointerEvents="box-none" style={styles.overlayFill}>
             <Animated.View
               style={[
                 styles.popupToolbar,
-                // Dynamically position the toolbar relative to the selection
                 (() => {
                   const estimatedWidth = toolbarSize?.width ?? 360;
                   const estimatedHeight = toolbarSize?.height ?? 100;
-                  const selectionCenterX = selectionRect.left + (selectionRect.width / 2);
+                  const selectionCenterX =
+                    selectionRect.left + selectionRect.width / 2;
                   const margin = 8;
-                  let top = (selectionRect.top - estimatedHeight - margin);
-                  const placeBelow = top < margin && (selectionRect.bottom !== undefined);
+                  let top = selectionRect.top - estimatedHeight - margin;
+                  const placeBelow =
+                    top < margin && selectionRect.bottom !== undefined;
                   if (placeBelow && selectionRect.bottom !== undefined) {
                     top = selectionRect.bottom + margin;
                   }
-                  // Clamp horizontally within the webview bounds
-                  let left = selectionCenterX - (estimatedWidth / 2);
+                  let left = selectionCenterX - estimatedWidth / 2;
                   const minLeft = margin;
-                  const maxLeft = Math.max(minLeft, (webViewLayout.width - estimatedWidth - margin));
+                  const maxLeft = Math.max(
+                    minLeft,
+                    webViewLayout.width - estimatedWidth - margin,
+                  );
                   if (left < minLeft) left = minLeft;
                   if (left > maxLeft) left = maxLeft;
-                  return { top, left, maxWidth: webViewLayout.width - (margin * 2) } as const;
+                  return {
+                    top,
+                    left,
+                    maxWidth: webViewLayout.width - margin * 2,
+                  } as const;
                 })(),
-                { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+                { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
               ]}
               onLayout={(e: any) => {
                 const { width, height } = e.nativeEvent.layout;
-                if (!toolbarSize || toolbarSize.width !== width || toolbarSize.height !== height) {
+                if (
+                  !toolbarSize ||
+                  toolbarSize.width !== width ||
+                  toolbarSize.height !== height
+                ) {
                   setToolbarSize({ width, height });
                 }
               }}
@@ -199,17 +286,36 @@ const SimplifiedDocumentEditor: React.FC<DocumentEditorProps> = () => {
                   (() => {
                     const estimatedWidth = toolbarSize?.width ?? 360;
                     const estimatedHeight = toolbarSize?.height ?? 100;
-                    const selectionCenterX = selectionRect.left + (selectionRect.width / 2);
+                    const selectionCenterX =
+                      selectionRect.left + selectionRect.width / 2;
                     const margin = 8;
-                    let top = (selectionRect.top - estimatedHeight - margin);
-                    const placeBelow = top < margin && (selectionRect.bottom !== undefined);
-                    let left = selectionCenterX - (estimatedWidth / 2);
+                    let top = selectionRect.top - estimatedHeight - margin;
+                    const placeBelow =
+                      top < margin && selectionRect.bottom !== undefined;
+                    let left = selectionCenterX - estimatedWidth / 2;
                     const minLeft = margin;
-                    const maxLeft = Math.max(minLeft, (webViewLayout.width - estimatedWidth - margin));
+                    const maxLeft = Math.max(
+                      minLeft,
+                      webViewLayout.width - estimatedWidth - margin,
+                    );
                     if (left < minLeft) left = minLeft;
                     if (left > maxLeft) left = maxLeft;
-                    const arrowLeftWithin = (selectionCenterX - left) - 7; // half of 14px
-                    return placeBelow ? { top: -7, left: Math.max(12, Math.min(estimatedWidth - 26, arrowLeftWithin)) } : { bottom: -7, left: Math.max(12, Math.min(estimatedWidth - 26, arrowLeftWithin)) };
+                    const arrowLeftWithin = selectionCenterX - left - 7;
+                    return placeBelow
+                      ? {
+                          top: -7,
+                          left: Math.max(
+                            12,
+                            Math.min(estimatedWidth - 26, arrowLeftWithin),
+                          ),
+                        }
+                      : {
+                          bottom: -7,
+                          left: Math.max(
+                            12,
+                            Math.min(estimatedWidth - 26, arrowLeftWithin),
+                          ),
+                        };
                   })(),
                 ]}
               />
@@ -229,6 +335,7 @@ const SimplifiedDocumentEditor: React.FC<DocumentEditorProps> = () => {
                   setIsToolbarVisible(false);
                   setSelectionRect(null); // Clear the selection rectangle to ensure it's gone.
                   webViewRef.current?.executeCommand('unselect');
+                  webViewRef.current?.getCurrentHTML();
                 }}
               />
             </Animated.View>

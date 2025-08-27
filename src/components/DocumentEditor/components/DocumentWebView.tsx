@@ -4,17 +4,18 @@ import { WebView } from 'react-native-webview';
 
 export type DocumentWebViewHandle = {
   executeCommand: (command: string, value?: string) => void;
+  getCurrentHTML: () => Promise<string>;
 };
 
 type Props = {
   onMessage?: (event: any) => void;
   editable?: boolean;
   style?: StyleProp<ViewStyle>;
-  html?: string;
+  content?: string; // Dynamic content for the editor div
   onLayout?: (e: any) => void;
 };
 
-const htmlContent = () => `
+const htmlContent = (content?: string) => `
 <!DOCTYPE html>
 <html>
   <head>
@@ -49,10 +50,10 @@ const htmlContent = () => `
       /* Disable native copy/paste callout while allowing selection */
       #editor, #editor * { -webkit-touch-callout: none; }
       /* Make font changes more visible */
-      .font-changed { 
-        border: 1px dashed #3b82f6; 
-        padding: 2px 4px; 
-        border-radius: 4px; 
+      .font-changed {
+        border: 1px dashed #3b82f6;
+        padding: 2px 4px;
+        border-radius: 4px;
         background: rgba(59, 130, 246, 0.05);
       }
       /* Keep selection highlight semi-transparent so color/style changes remain visible */
@@ -62,41 +63,7 @@ const htmlContent = () => `
   </head>
   <body>
     <div id="editor" contenteditable="false">
-      <h1>Sample Document</h1>
-      <p>
-        Select any portion of this text to try the toolbar actions. You can change
-        the <strong>font</strong>, <em>size</em>, <u>style</u>, and <span style="color:#ef4444">color</span> of the selection.
-      </p>
-      <h2>Introduction</h2>
-      <p>
-        This is a longer paragraph intended to provide more content inside the WebView.
-        The goal is to ensure selection works consistently across multiple lines and
-        different elements such as <code>inline code</code>, links like
-        <a href="https://example.com">example.com</a>, and nested inline spans.
-      </p>
-      <p>
-        Formatting commands are applied programmatically and do not allow free typing.
-        This means you can highlight words or sentences and apply bold, italic, underline,
-        font family, size, or color changes from the toolbar above.
-      </p>
-      <h2>List of Topics</h2>
-      <ul>
-        <li>Headings and paragraphs for realistic structure</li>
-        <li>Inline elements such as <em>emphasis</em> and <strong>strong</strong></li>
-        <li>Links (navigation blocked)</li>
-        <li>Lists and quotes</li>
-      </ul>
-      <blockquote>
-        "Good writing is clear thinking made visible." — Bill Wheeler
-      </blockquote>
-      <h3>Another Section</h3>
-      <p>
-        Try selecting across sentence boundaries, within lists, or inside quotes. The selection should remain
-        intact when using the toolbar, and the caret should remain hidden.
-      </p>
-      <p>
-        End of sample content. Feel free to add more text programmatically if required.
-      </p>
+      ${content || ''}
     </div>
     <script>
       (function() {
@@ -276,7 +243,7 @@ const htmlContent = () => `
             lastRange = r;
             // Only persist stableRange when the selection is non-collapsed
             if (r && !r.collapsed && text && text.length > 0) {
-              try { 
+              try {
                 stableRange = r.cloneRange();
                 var rect = r.getBoundingClientRect();
                 if (rect) {
@@ -337,14 +304,14 @@ const htmlContent = () => `
             editor && editor.setAttribute('contenteditable', 'true');
             window.__restoreSelection();
             try { document.execCommand('styleWithCSS', false, true); } catch(e) {}
-            
+
             // Debug logging
-            console.log('Executing command:', command, 'with value:', value);
-            
+            // console.log('Executing command:', command, 'with value:', value);
+
             // Log original HTML before changes
             var originalHTML = editor.innerHTML;
-            console.log('Original HTML:', originalHTML);
-            
+            // console.log('Original HTML:', originalHTML);
+
             // If user tapped a color immediately after selection, ensure we use the last stable non-collapsed range
             if (command === 'changeTextColor' || command === 'changeFontFamily' || command === 'changeFontSize') {
               try {
@@ -362,18 +329,18 @@ const htmlContent = () => `
                 }
               } catch(_e) {}
             }
-            
+
             if (command === 'changeFontFamily') {
-              console.log('Changing font to:', value);
+              // console.log('Changing font to:', value);
               var applied = false;
               try {
                 applied = document.execCommand('fontName', false, value);
-                console.log('execCommand fontName result:', applied);
-              } catch(e1) { 
+                // console.log('execCommand fontName result:', applied);
+              } catch(e1) {
                 console.log('execCommand fontName error:', e1);
-                applied = false; 
+                applied = false;
               }
-              
+
               // Fallback: wrap selection in a span with font-family style
               if (!applied) {
                 console.log('Using fallback font method');
@@ -387,28 +354,28 @@ const htmlContent = () => `
                         span.style.fontFamily = String(value || 'inherit');
                         span.className = 'font-changed';
                         span.setAttribute('data-font', String(value || 'inherit'));
-                        
+
                         var contents = range.extractContents();
                         span.appendChild(contents);
                         range.insertNode(span);
-                        
+
                         // Move caret after inserted span and update lastRange
                         range.setStartAfter(span);
                         range.setEndAfter(span);
                         sel.removeAllRanges();
                         sel.addRange(range);
                         lastRange = range.cloneRange();
-                        
-                        console.log('Font applied via span:', value);
+
+                        // console.log('Font applied via span:', value);
                       }
                     }
                   }
                 } catch(e2) {
-                  console.log('Font fallback error:', e2);
+                  // console.log('Font fallback error:', e2);
                   post('error', { message: 'Font apply failed: ' + String(e2) });
                 }
               } else {
-                console.log('Font applied via execCommand');
+                // console.log('Font applied via execCommand');
               }
             } else if (command === 'changeFontSize') {
               document.execCommand('fontSize', false, value);
@@ -442,7 +409,7 @@ const htmlContent = () => `
               } catch(_e4) {}
               return;
             }
-            
+
             // Ensure selection remains visible: if selection collapsed, restore to stableRange
             try {
               var selKeep = window.getSelection();
@@ -463,19 +430,19 @@ const htmlContent = () => `
 
             // Log result HTML after changes
             var resultHTML = editor.innerHTML;
-            console.log('Result HTML after', command + ':', resultHTML);
-            
+            // console.log('Result HTML after', command + ':', resultHTML);
+
             // Send HTML changes to React Native for debugging
-            post('htmlChanged', { 
-              command: command, 
+            post('htmlChanged', {
+              command: command,
               value: value,
               originalHTML: originalHTML,
               resultHTML: resultHTML,
               hasChanges: originalHTML !== resultHTML
             });
-            
+
           } catch (e) {
-            console.log('Command execution error:', e);
+            // console.log('Command execution error:', e);
             post('error', { message: String(e) });
           } finally {
             try {
@@ -485,10 +452,12 @@ const htmlContent = () => `
             } catch(ee) {}
           }
         }
-        
+
         // Function to get current HTML for debugging
         window.__getCurrentHTML = function() {
-          return editor ? editor.innerHTML : '';
+          var currentHTML = editor ? editor.innerHTML : '';
+          post('currentHTML', { html: currentHTML });
+          return currentHTML;
         }
       })();
     </script>
@@ -496,41 +465,47 @@ const htmlContent = () => `
   </html>
 `;
 
+const DocumentWebView = forwardRef<DocumentWebViewHandle, Props>(
+  function DocumentWebView(
+    { onMessage, editable: _editable = false, style, content, onLayout },
+    ref,
+  ) {
+    const webRef = useRef<WebView>(null);
 
-const DocumentWebView = forwardRef<DocumentWebViewHandle, Props>(function DocumentWebView(
-  { onMessage, editable: _editable = false, style, html, onLayout },
-  ref
-) {
-  const webRef = useRef<WebView>(null);
+    // console.log('Rendered HTML:', html ?? htmlContent(content));
 
-  console.log('Rendered HTML:', html ?? htmlContent());
+    useImperativeHandle(ref, () => ({
+      executeCommand(command: string, value?: string) {
+        const js = `window.__execCommand(${JSON.stringify(command)}, ${
+          value !== undefined ? JSON.stringify(value) : 'undefined'
+        }); true;`;
+        webRef.current?.injectJavaScript(js);
+      },
+      getCurrentHTML() {
+        return new Promise<string>(resolve => {
+          const js = `window.__getCurrentHTML(); true;`;
+          webRef.current?.injectJavaScript(js);
+          // Note: The actual HTML will be sent via onMessage with type 'currentHTML'
+          // This is just for triggering the request
+          resolve('');
+        });
+      },
+    }));
 
-  useImperativeHandle(ref, () => ({
-    executeCommand(command: string, value?: string) {
-      const js = `window.__execCommand(${JSON.stringify(command)}, ${value !== undefined ? JSON.stringify(value) : 'undefined'}); true;`;
-      webRef.current?.injectJavaScript(js);
-    },
-    getCurrentHTML() {
-      const js = `window.__getCurrentHTML(); true;`;
-      return webRef.current?.injectJavaScript(js);
-    },
-  }));
-
-  return (
-    <WebView
-      ref={webRef}
-      originWhitelist={["*"]}
-      onMessage={onMessage}
-      source={{ html: html ?? htmlContent() }}
-      style={style}
-      androidLayerType="software"
-      onShouldStartLoadWithRequest={() => true}
-      onContentProcessDidTerminate={() => {}}
-      onLayout={onLayout}
-    />
-  );
-});
+    return (
+      <WebView
+        ref={webRef}
+        originWhitelist={['*']}
+        onMessage={onMessage}
+        source={{ html: htmlContent(content) }}
+        style={style}
+        androidLayerType="software"
+        onShouldStartLoadWithRequest={() => true}
+        onContentProcessDidTerminate={() => {}}
+        onLayout={onLayout}
+      />
+    );
+  },
+);
 
 export default DocumentWebView;
-
-
